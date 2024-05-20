@@ -1,44 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { CreateCatDto } from './dto/create-cat.dto';
-
-export interface Cat {
-    id: number;
-    name: string;
-    age: number;
-    breed: string;
-}
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Cat } from './schema/cat.schema';
 
 @Injectable()
 export class CatsService {
-    private readonly cats: Cat[] = [];
-    private idCounter = 1;
+    constructor(@InjectModel('Cat') private catModel: Model<Cat>) {}
 
-    create(catDto: CreateCatDto): Cat {
-        const cat = { id: this.idCounter++, ...catDto };
-        this.cats.push(cat);
-        return cat;
+    async create(catDto: CreateCatDto): Promise<Cat> {
+        const createdCat = new this.catModel(catDto);
+        return createdCat.save();
     }
 
-    findAll(): Cat[] {
-        return this.cats;
+    async findAll(): Promise<Cat[]> {
+        return this.catModel.find().exec();
     }
 
-    findOne(id: number): Cat {
-        return this.cats.find(cat => cat.id === id);
+    async findOne(id: string): Promise<Cat> {
+        return this.catModel.findById(id).exec();
     }
 
-    update(id: number, updateCatDto: Partial<CreateCatDto>): Cat {
-        const catIndex = this.cats.findIndex(cat => cat.id === id);
-        if (catIndex >= 0) {
-            this.cats[catIndex] = { ...this.cats[catIndex], ...updateCatDto };
-            return this.cats[catIndex];
-        }
+    async update(id: string, updateCatDto: Partial<CreateCatDto>): Promise<Cat> {
+        return this.catModel.findByIdAndUpdate(id, updateCatDto, { new: true }).exec();
     }
 
-    remove(id: number): void {
-        const catIndex = this.cats.findIndex(cat => cat.id === id);
-        if (catIndex >= 0) {
-            this.cats.splice(catIndex, 1);
-        }
+    async remove(id: number): Promise<void | Cat> {
+        return this.catModel.findByIdAndDelete(id).exec();
     }
 }
